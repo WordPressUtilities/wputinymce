@@ -4,7 +4,7 @@
 Plugin Name: WPU TinyMCE Buttons
 Plugin URI: http://github.com/Darklg/WPUtilities
 Description: Add new buttons to TinyMCE
-Version: 0.5
+Version: 0.6
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -33,6 +33,10 @@ class WPUTinyMCE
         add_action('init', array(&$this,
             'set_buttons'
         ));
+
+        add_action('admin_print_footer_scripts', array(&$this,
+            'set_quicktags'
+        ));
     }
 
     function check_buttons_list() {
@@ -40,6 +44,7 @@ class WPUTinyMCE
         // Import buttons
         $buttons = apply_filters('wputinymce_buttons', array());
         $this->buttons = array();
+        $this->quicktags = array();
 
         // Check values
         foreach ($buttons as $button_id => $button) {
@@ -51,12 +56,30 @@ class WPUTinyMCE
                 $button['image'] = $this->up_url . '/icon-list.png';
             }
 
+            if (!isset($button['quicktag']) || !$button['quicktag']) {
+                $button['quicktag'] = false;
+            }
+
             // Default title
             if (!isset($button['title']) || empty($button['title'])) {
                 $button['title'] = ucwords(str_replace('_', ' ', $button_id));
             }
 
+            if (!isset($button['post_type'])) {
+                $button['post_type'] = array(
+                    'any'
+                );
+            }
+            if (!is_array($button['post_type'])) {
+                $button['post_type'] = array(
+                    $button['post_type']
+                );
+            }
+
             if (isset($button['html'])) {
+                if ($button['quicktag']) {
+                    $this->quicktags[$button_id] = $button;
+                }
                 $this->buttons[$button_id] = $button;
             }
         }
@@ -107,7 +130,8 @@ class WPUTinyMCE
     function set_options() {
         $this->options = array(
             'plugin-id' => 'wpu_tinymce',
-            'buttons' => $this->buttons
+            'buttons' => $this->buttons,
+            'quicktags' => $this->quicktags
         );
     }
 
@@ -122,6 +146,23 @@ class WPUTinyMCE
         }
     }
 
+    // add more buttons to the html editor
+    function set_quicktags() {
+
+        if (!wp_script_is('quicktags')) {
+            return;
+        }
+        $post_type = get_post_type();
+
+        echo '<script type="text/javascript">';
+        foreach ($this->options['quicktags'] as $button_id => $button) {
+            if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
+                echo "QTags.addButton( 'wputinycme_" . $button_id . "', '" . addslashes($button['title']) . "', '" . addslashes($button['html']) . "', '', '', '" . addslashes($button['title']) . "', 200 );";
+            }
+        }
+        echo '</script>';
+    }
+
     function add_plugins($plugins = array()) {
         $plugins[$this->options['plugin-id']] = $this->up_url . '/cache.js';
         return $plugins;
@@ -130,7 +171,7 @@ class WPUTinyMCE
     function add_buttons($buttons = array()) {
         $post_type = get_post_type();
         foreach ($this->options['buttons'] as $button_id => $button) {
-            if (isset($button['post_type']) && is_array($button['post_type']) && in_array($post_type, $button['post_type'])) {
+            if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
                 $buttons[] = $button_id;
             }
         }
