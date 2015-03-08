@@ -4,7 +4,7 @@
 Plugin Name: WPU TinyMCE Buttons
 Plugin URI: http://github.com/Darklg/WPUtilities
 Description: Add new buttons to TinyMCE
-Version: 0.6
+Version: 0.7
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -22,7 +22,7 @@ class WPUTinyMCE
         $this->up_dir = $upload_dir['basedir'] . '/wpu_tinymce-cache';
         $this->up_url = $upload_dir['baseurl'] . '/wpu_tinymce-cache';
         $this->plugin_assets_dir = dirname(__FILE__) . '/assets/';
-        $this->plugin_version = "0.4.1";
+        $this->plugin_version = "0.7";
 
         add_action('init', array(&$this,
             'check_buttons_list'
@@ -36,6 +36,9 @@ class WPUTinyMCE
 
         add_action('admin_print_footer_scripts', array(&$this,
             'set_quicktags'
+        ));
+        add_action('admin_enqueue_scripts', array(&$this,
+            'load_assets'
         ));
     }
 
@@ -57,7 +60,7 @@ class WPUTinyMCE
             }
 
             if (!isset($button['quicktag']) || !$button['quicktag']) {
-                $button['quicktag'] = false;
+                $button['quicktag'] = true;
             }
 
             // Default title
@@ -135,6 +138,13 @@ class WPUTinyMCE
         );
     }
 
+    function load_assets() {
+        $screen = get_current_screen();
+        if ($screen->base == 'post') {
+            wp_enqueue_script($this->options['plugin-id'] . '__functions', plugins_url('/assets/functions.js', __FILE__));
+        }
+    }
+
     function set_buttons() {
         if (current_user_can('edit_posts') && current_user_can('edit_pages')) {
             add_filter("mce_external_plugins", array(&$this,
@@ -157,14 +167,17 @@ class WPUTinyMCE
         echo '<script type="text/javascript">';
         foreach ($this->options['quicktags'] as $button_id => $button) {
             if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
-                echo "QTags.addButton( 'wputinycme_" . $button_id . "', '" . addslashes($button['title']) . "', '" . addslashes($button['html']) . "', '', '', '" . addslashes($button['title']) . "', 200 );";
+                $item_id = "wputinycme_" . $button_id;
+                $callback_item = 'callback__' . $item_id;
+                echo 'function ' . $callback_item . '(){document.getElementById( \'content\' ).innerHTML += wputinymce_filter_vars("' . addslashes($button['html']) . '");};';
+                echo "QTags.addButton( '" . $item_id . "', '" . addslashes($button['title']) . "', " . $callback_item . ", '', '', '" . addslashes($button['title']) . "', 200 );\n";
             }
         }
         echo '</script>';
     }
 
     function add_plugins($plugins = array()) {
-        $plugins[$this->options['plugin-id']] = $this->up_url . '/cache.js';
+        $plugins[$this->options['plugin-id'] . '-cache'] = $this->up_url . '/cache.js';
         return $plugins;
     }
 
