@@ -1,5 +1,10 @@
+/* ----------------------------------------------------------
+  Filter inserted vars
+---------------------------------------------------------- */
+
 function wputinymce_filter_vars(html) {
-        var regexConfirm = /({{[a-z0-9 ]+}})/g,replace,
+    var regexConfirm = /({{[a-z0-9 ]+}})/g,
+        replace,
         match,
         fullMatches = [],
         matches = html.match(regexConfirm);
@@ -21,4 +26,25 @@ function wputinymce_filter_vars(html) {
         html = html.replace(new RegExp(matches[i], 'g'), replace);
     }
     return html;
+}
+
+/* ----------------------------------------------------------
+  Insert text at cursor position
+---------------------------------------------------------- */
+/* Thx to http://stackoverflow.com/a/11077016 */
+
+function wputinymce_insertAtCursor(item, val) {
+    if (document.selection) {
+        item.focus();
+        sel = document.selection.createRange();
+        sel.text = val;
+    }
+    else if (item.selectionStart || item.selectionStart == '0') {
+        var startPos = item.selectionStart,
+            endPos = item.selectionEnd;
+        item.value = item.value.substring(0, startPos) + val + item.value.substring(endPos, item.value.length);
+    }
+    else {
+        item.value += val;
+    }
 }

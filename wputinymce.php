@@ -4,7 +4,7 @@
 Plugin Name: WPU TinyMCE Buttons
 Plugin URI: http://github.com/Darklg/WPUtilities
 Description: Add new buttons to TinyMCE
-Version: 0.7
+Version: 0.8
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -13,6 +13,8 @@ License URI: http://opensource.org/licenses/MIT
 
 class WPUTinyMCE
 {
+    public $plugin_version = '0.8';
+
     function __construct() {
         if (!is_admin()) {
             return;
@@ -22,7 +24,6 @@ class WPUTinyMCE
         $this->up_dir = $upload_dir['basedir'] . '/wpu_tinymce-cache';
         $this->up_url = $upload_dir['baseurl'] . '/wpu_tinymce-cache';
         $this->plugin_assets_dir = dirname(__FILE__) . '/assets/';
-        $this->plugin_version = "0.7";
 
         add_action('init', array(&$this,
             'check_buttons_list'
@@ -141,7 +142,7 @@ class WPUTinyMCE
     function load_assets() {
         $screen = get_current_screen();
         if ($screen->base == 'post') {
-            wp_enqueue_script($this->options['plugin-id'] . '__functions', plugins_url('/assets/functions.js', __FILE__));
+            wp_enqueue_script($this->options['plugin-id'] . '__functions', plugins_url('/assets/functions.js', __FILE__) , array() , $this->plugin_version);
         }
     }
 
@@ -169,7 +170,7 @@ class WPUTinyMCE
             if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
                 $item_id = "wputinycme_" . $button_id;
                 $callback_item = 'callback__' . $item_id;
-                echo 'function ' . $callback_item . '(){document.getElementById( \'content\' ).innerHTML += wputinymce_filter_vars("' . addslashes($button['html']) . '");};';
+                echo 'function ' . $callback_item . '(){wputinymce_insertAtCursor(document.getElementById( \'content\' ),wputinymce_filter_vars("' . addslashes($button['html']) . '"));};';
                 echo "QTags.addButton( '" . $item_id . "', '" . addslashes($button['title']) . "', " . $callback_item . ", '', '', '" . addslashes($button['title']) . "', 200 );\n";
             }
         }
