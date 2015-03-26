@@ -9,6 +9,10 @@ function wputinymce_filter_vars(html) {
         fullMatches = [],
         matches = html.match(regexConfirm);
 
+    if (!matches) {
+        return html;
+    }
+
     // Detect {{ vars }} in tinymce content
     for (var i = 0, len = matches.length; i < len; i++) {
         match = matches[i].replace(/[\{\ \}]/g, '');
