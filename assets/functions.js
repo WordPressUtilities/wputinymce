@@ -52,3 +52,17 @@ function wputinymce_insertAtCursor(item, val) {
         item.value += val;
     }
 }
+
+/* ----------------------------------------------------------
+  AddButton
+---------------------------------------------------------- */
+
+function wputinymce_addbutton(ed, item) {
+    ed.addButton(item.id, {
+        title: item.title,
+        image: item.image,
+        onclick: function() {
+            ed.selection.setContent(wputinymce_filter_vars(item.html));
+        }
+    });
+}
