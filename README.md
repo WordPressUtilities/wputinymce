@@ -23,4 +23,4 @@ function wputh_set_wputinymce_buttons($buttons) {
     );
     return $buttons;
 }
-``
+```
