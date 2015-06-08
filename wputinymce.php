@@ -4,7 +4,7 @@
 Plugin Name: WPU TinyMCE Buttons
 Plugin URI: http://github.com/Darklg/WPUtilities
 Description: Add new buttons to TinyMCE
-Version: 0.8.2
+Version: 0.8.3
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -13,7 +13,7 @@ License URI: http://opensource.org/licenses/MIT
 
 class WPUTinyMCE
 {
-    public $plugin_version = '0.8.2';
+    public $plugin_version = '0.8.3';
 
     function __construct() {
         if (!is_admin()) {
@@ -170,7 +170,7 @@ class WPUTinyMCE
             if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
                 $item_id = "wputinycme_" . $button_id;
                 $callback_item = 'callback__' . $item_id;
-                echo 'function ' . $callback_item . '(){wputinymce_insertAtCursor(document.getElementById( \'content\' ),wputinymce_filter_vars("' . addslashes($button['html']) . '"));};';
+                echo 'function ' . $callback_item . '(b,el){wputinymce_insertAtCursor(el,wputinymce_filter_vars("' . addslashes($button['html']) . '"));};';
                 echo "QTags.addButton( '" . $item_id . "', '" . addslashes($button['title']) . "', " . $callback_item . ", '', '', '" . addslashes($button['title']) . "', 200 );\n";
             }
         }
