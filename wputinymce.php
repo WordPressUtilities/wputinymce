@@ -4,18 +4,17 @@
 Plugin Name: WPU TinyMCE Buttons
 Plugin URI: http://github.com/Darklg/WPUtilities
 Description: Add new buttons to TinyMCE
-Version: 0.8.3
+Version: 0.9
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
 License URI: http://opensource.org/licenses/MIT
 */
 
-class WPUTinyMCE
-{
-    public $plugin_version = '0.8.3';
+class WPUTinyMCE {
+    public $plugin_version = '0.9';
 
-    function __construct() {
+    public function __construct() {
         if (!is_admin()) {
             return;
         }
@@ -43,7 +42,7 @@ class WPUTinyMCE
         ));
     }
 
-    function check_buttons_list() {
+    public function check_buttons_list() {
 
         // Import buttons
         $buttons = apply_filters('wputinymce_buttons', array());
@@ -80,6 +79,10 @@ class WPUTinyMCE
                 );
             }
 
+            if (!isset($button['html']) && isset($button['before_select'], $button['after_select'])) {
+                $button['html'] = $button['before_select'] . $button['title'] . $button['after_select'];
+            }
+
             if (isset($button['html'])) {
                 if ($button['quicktag']) {
                     $this->quicktags[$button_id] = $button;
@@ -88,23 +91,18 @@ class WPUTinyMCE
             }
         }
 
-        // Check version
-        $buttons_version = md5($this->plugin_version . serialize($this->buttons));
+        $buttons_version = $this->get_buttons_version();
         $buttons_version_option = get_option('wputinymce_buttons_list');
 
-        // Same version : quit
-        if ($buttons_version == $buttons_version_option) {
-            return;
+        // File does not exists or invalid version
+        if (!file_exists($this->up_dir . '/cache.js') || $buttons_version != $buttons_version_option) {
+            $this->regenerate_js_file();
+            update_option('wputinymce_buttons_list', $buttons_version);
         }
 
-        // Else : regenerate JS
-        $this->regenerate_js_file();
-
-        // Save version
-        update_option('wputinymce_buttons_list', $buttons_version);
     }
 
-    function regenerate_js_file() {
+    public function regenerate_js_file() {
 
         // Check cache directory
         if (!is_dir($this->up_dir)) {
@@ -114,14 +112,14 @@ class WPUTinyMCE
 
         // Regenerate JS
         $js = "(function(){\n";
-        $js.= "var wpu_tinymce_items = [];\n";
+        $js .= "var wpu_tinymce_items = [];\n";
 
         foreach ($this->buttons as $button_id => $button) {
-            $js.= "wpu_tinymce_items.push(" . json_encode($button) . ");\n";
+            $js .= "wpu_tinymce_items.push(" . json_encode($button) . ");\n";
         }
 
-        $js.= file_get_contents($this->plugin_assets_dir . "tinymce-create.js") . "\n";
-        $js.= "}());";
+        $js .= file_get_contents($this->plugin_assets_dir . "tinymce-create.js") . "\n";
+        $js .= "}());";
 
         file_put_contents($this->up_dir . '/cache.js', $js);
 
@@ -131,7 +129,7 @@ class WPUTinyMCE
         }
     }
 
-    function set_options() {
+    public function set_options() {
         $this->options = array(
             'plugin-id' => 'wpu_tinymce',
             'buttons' => $this->buttons,
@@ -139,14 +137,14 @@ class WPUTinyMCE
         );
     }
 
-    function load_assets() {
+    public function load_assets() {
         $screen = get_current_screen();
         if ($screen->base == 'post') {
-            wp_enqueue_script($this->options['plugin-id'] . '__functions', plugins_url('/assets/functions.js', __FILE__) , array() , $this->plugin_version);
+            wp_enqueue_script($this->options['plugin-id'] . '__functions', plugins_url('/assets/functions.js', __FILE__), array(), $this->plugin_version);
         }
     }
 
-    function set_buttons() {
+    public function set_buttons() {
         if (current_user_can('edit_posts') && current_user_can('edit_pages')) {
             add_filter("mce_external_plugins", array(&$this,
                 'add_plugins'
@@ -158,7 +156,7 @@ class WPUTinyMCE
     }
 
     // add more buttons to the html editor
-    function set_quicktags() {
+    public function set_quicktags() {
 
         if (!wp_script_is('quicktags')) {
             return;
@@ -177,12 +175,12 @@ class WPUTinyMCE
         echo '</script>';
     }
 
-    function add_plugins($plugins = array()) {
-        $plugins[$this->options['plugin-id']] = $this->up_url . '/cache.js';
+    public function add_plugins($plugins = array()) {
+        $plugins[$this->options['plugin-id']] = $this->up_url . '/cache.js?v=' . $this->get_buttons_version();
         return $plugins;
     }
 
-    function add_buttons($buttons = array()) {
+    public function add_buttons($buttons = array()) {
         $post_type = get_post_type();
         foreach ($this->options['buttons'] as $button_id => $button) {
             if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
@@ -191,7 +189,15 @@ class WPUTinyMCE
         }
         return $buttons;
     }
+
+    /* ----------------------------------------------------------
+      Helpers
+    ---------------------------------------------------------- */
+
+    public function get_buttons_version() {
+        return md5($this->plugin_version . serialize($this->buttons));
+    }
+
 }
 
 new WPUTinyMCE();
-

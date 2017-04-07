@@ -33,6 +33,17 @@ function wputinymce_filter_vars(html) {
 }
 
 /* ----------------------------------------------------------
+  Remove tags
+---------------------------------------------------------- */
+
+function wputinycme_clear_html(html) {
+    if (html == null) return "";
+    var tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+}
+
+/* ----------------------------------------------------------
   Insert text at cursor position
 ---------------------------------------------------------- */
 /* Thx to http://stackoverflow.com/a/11077016 */
@@ -62,7 +73,14 @@ function wputinymce_addbutton(ed, item) {
         title: item.title,
         image: item.image,
         onclick: function() {
-            ed.selection.setContent(wputinymce_filter_vars(item.html));
+            var _sel = ed.selection.getContent();
+            if (!_sel || !item.before_select || !item.after_select) {
+                ed.selection.setContent(wputinymce_filter_vars(item.html));
+            }
+            else {
+                ed.focus();
+                ed.selection.setContent(item.before_select + wputinycme_clear_html(ed.selection.getContent()) + item.after_select);
+            }
         }
     });
 }

@@ -21,6 +21,12 @@ function wputh_set_wputinymce_buttons($buttons) {
         'image' => get_stylesheet_directory_uri() . '/images/tinymce/table.png',
         'html' => '<table class="wputinymce-table"><thead><tr><th>Entête</th><th>Entête</th></tr></thead><tbody><tr><td>Content</td><td>Content</td></tr></tbody></table>'
     );
+    $buttons['wrap_test'] = array(
+        'title' => 'Wrap test',
+        'image' => get_stylesheet_directory_uri() . '/images/tinymce/table.png',
+        'before_select' => '<span class="wrap-test">',
+        'after_select' => '</span>',
+    );
     return $buttons;
 }
 ```
