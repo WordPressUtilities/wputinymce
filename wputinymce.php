@@ -4,7 +4,7 @@
 Plugin Name: WPU TinyMCE Buttons
 Plugin URI: http://github.com/Darklg/WPUtilities
 Description: Add new buttons to TinyMCE
-Version: 0.9.1
+Version: 0.10.0
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -12,18 +12,18 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class WPUTinyMCE {
-    public $plugin_version = '0.9.1';
+    public $plugin_version = '0.10.0';
 
     public function __construct() {
-        if (!is_admin()) {
-            return;
-        }
 
         $upload_dir = wp_upload_dir();
         $this->up_dir = $upload_dir['basedir'] . '/wpu_tinymce-cache';
         $this->up_url = $upload_dir['baseurl'] . '/wpu_tinymce-cache';
         $this->plugin_assets_dir = dirname(__FILE__) . '/assets/';
 
+        add_action('wp_enqueue_scripts', array(&$this,
+            'add_css_front'
+        ));
         add_action('init', array(&$this,
             'check_buttons_list'
         ));
@@ -33,6 +33,10 @@ class WPUTinyMCE {
         add_action('init', array(&$this,
             'set_buttons'
         ));
+
+        if (!is_admin()) {
+            return;
+        }
 
         add_action('admin_print_footer_scripts', array(&$this,
             'set_quicktags'
@@ -95,8 +99,10 @@ class WPUTinyMCE {
         $buttons_version_option = get_option('wputinymce_buttons_list');
 
         // File does not exists or invalid version
-        if (!file_exists($this->up_dir . '/cache.js') || $buttons_version != $buttons_version_option) {
+
+        if (!file_exists($this->up_dir . '/cache.js') || !file_exists($this->up_dir . '/cache.css') || !file_exists($this->up_dir . '/admin-cache.css') || !file_exists($this->up_dir . '/admin-cache.css') || $buttons_version != $buttons_version_option) {
             $this->regenerate_js_file();
+            $this->regenerate_css_file();
             update_option('wputinymce_buttons_list', $buttons_version);
         }
 
@@ -129,6 +135,36 @@ class WPUTinyMCE {
         }
     }
 
+    public function regenerate_css_file() {
+
+        // Check cache directory
+        if (!is_dir($this->up_dir)) {
+            @mkdir($this->up_dir, 0777);
+            @chmod($this->up_dir, 0777);
+        }
+
+        // Regenerate CSS
+        $css = '';
+        $admin_css = '';
+        $front_css = '';
+        foreach ($this->buttons as $button_id => $button) {
+            if (isset($button['css'])) {
+                $css .= $button['css'];
+            }
+            if (isset($button['front_css'])) {
+                $front_css .= $button['front_css'];
+            }
+            if (isset($button['admin_css'])) {
+                $admin_css .= $button['admin_css'];
+            }
+        }
+
+        file_put_contents($this->up_dir . '/admin-cache.css', $admin_css);
+        file_put_contents($this->up_dir . '/front-cache.css', $front_css);
+        file_put_contents($this->up_dir . '/cache.css', $css);
+
+    }
+
     public function set_options() {
         $this->options = array(
             'plugin-id' => 'wpu_tinymce',
@@ -145,6 +181,9 @@ class WPUTinyMCE {
         if (current_user_can('edit_posts') && current_user_can('edit_pages')) {
             add_filter("mce_external_plugins", array(&$this,
                 'add_plugins'
+            ));
+            add_filter("mce_css", array(&$this,
+                'add_styles'
             ));
             add_filter('mce_buttons', array(&$this,
                 'add_buttons'
@@ -163,7 +202,7 @@ class WPUTinyMCE {
         echo '<script type="text/javascript">';
         foreach ($this->options['quicktags'] as $button_id => $button) {
             if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
-                $item_id = "wputinycme_" . $button_id;
+                $item_id = "wputinymce_" . $button_id;
                 $callback_item = 'callback__' . $item_id;
                 echo 'function ' . $callback_item . '(b,el){wputinymce_insertAtCursor(el,wputinymce_filter_vars("' . addslashes($button['html']) . '"));};';
                 echo "QTags.addButton( '" . $item_id . "', '" . addslashes($button['title']) . "', " . $callback_item . ", '', '', '" . addslashes($button['title']) . "', 200 );\n";
@@ -175,6 +214,21 @@ class WPUTinyMCE {
     public function add_plugins($plugins = array()) {
         $plugins[$this->options['plugin-id']] = $this->up_url . '/cache.js?v=' . $this->get_buttons_version();
         return $plugins;
+    }
+
+    public function add_styles($styles = '') {
+        if (!empty($styles)) {
+            $styles .= ',';
+        }
+        $styles .= $this->up_url . '/cache.css?v=' . $this->get_buttons_version();
+        $styles .= ',';
+        $styles .= $this->up_url . '/admin-cache.css?v=' . $this->get_buttons_version();
+        return $styles;
+    }
+
+    public function add_css_front() {
+        wp_enqueue_style('wputinymce-style', $this->up_url . '/cache.css?v=' . $this->get_buttons_version());
+        wp_enqueue_style('wputinymce-style-front', $this->up_url . '/front-cache.css?v=' . $this->get_buttons_version());
     }
 
     public function add_buttons($buttons = array()) {
