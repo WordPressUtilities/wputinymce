@@ -4,7 +4,7 @@
 Plugin Name: WPU TinyMCE Buttons
 Plugin URI: http://github.com/Darklg/WPUtilities
 Description: Add new buttons to TinyMCE
-Version: 0.10.0
+Version: 0.10.1
 Author: Darklg
 Author URI: http://darklg.me/
 License: MIT License
@@ -12,7 +12,8 @@ License URI: http://opensource.org/licenses/MIT
 */
 
 class WPUTinyMCE {
-    public $plugin_version = '0.10.0';
+    public $plugin_version = '0.10.1';
+    private $files_length = false;
 
     public function __construct() {
 
@@ -21,9 +22,6 @@ class WPUTinyMCE {
         $this->up_url = $upload_dir['baseurl'] . '/wpu_tinymce-cache';
         $this->plugin_assets_dir = dirname(__FILE__) . '/assets/';
 
-        add_action('wp_enqueue_scripts', array(&$this,
-            'add_css_front'
-        ));
         add_action('init', array(&$this,
             'check_buttons_list'
         ));
@@ -32,6 +30,10 @@ class WPUTinyMCE {
         ));
         add_action('init', array(&$this,
             'set_buttons'
+        ));
+
+        add_action('wp_enqueue_scripts', array(&$this,
+            'add_css_front'
         ));
 
         if (!is_admin()) {
@@ -96,14 +98,14 @@ class WPUTinyMCE {
         }
 
         $buttons_version = $this->get_buttons_version();
-        $buttons_version_option = get_option('wputinymce_buttons_list');
+        $buttons_version_option = get_option('wputinymce_buttons_version');
+        $this->files_length = get_option('wputinymce_files_length');
 
         // File does not exists or invalid version
-
-        if (!file_exists($this->up_dir . '/cache.js') || !file_exists($this->up_dir . '/cache.css') || !file_exists($this->up_dir . '/admin-cache.css') || !file_exists($this->up_dir . '/admin-cache.css') || $buttons_version != $buttons_version_option) {
+        if (!is_array($this->files_length) || !file_exists($this->up_dir . '/cache.js') || !file_exists($this->up_dir . '/cache.css') || !file_exists($this->up_dir . '/admin-cache.css') || !file_exists($this->up_dir . '/admin-cache.css') || $buttons_version != $buttons_version_option) {
             $this->regenerate_js_file();
             $this->regenerate_css_file();
-            update_option('wputinymce_buttons_list', $buttons_version);
+            update_option('wputinymce_buttons_version', $buttons_version);
         }
 
     }
@@ -159,10 +161,23 @@ class WPUTinyMCE {
             }
         }
 
+        /* Clean up CSS */
+        $admin_css = trim($admin_css);
+        $front_css = trim($front_css);
+        $css = trim($css);
+
+        /* Save files */
         file_put_contents($this->up_dir . '/admin-cache.css', $admin_css);
         file_put_contents($this->up_dir . '/front-cache.css', $front_css);
         file_put_contents($this->up_dir . '/cache.css', $css);
 
+        /* Save details */
+        $this->files_length = array(
+            'admin' => strlen($admin_css),
+            'front' => strlen($front_css),
+            'css' => strlen($css)
+        );
+        update_option('wputinymce_files_length', $this->files_length);
     }
 
     public function set_options() {
@@ -217,18 +232,27 @@ class WPUTinyMCE {
     }
 
     public function add_styles($styles = '') {
-        if (!empty($styles)) {
-            $styles .= ',';
+        $more_styles = array();
+        if ($this->files_length['css'] > 0) {
+            $more_styles[] = $this->up_url . '/cache.css?v=' . $this->get_buttons_version();
         }
-        $styles .= $this->up_url . '/cache.css?v=' . $this->get_buttons_version();
-        $styles .= ',';
-        $styles .= $this->up_url . '/admin-cache.css?v=' . $this->get_buttons_version();
+        if ($this->files_length['admin'] > 0) {
+            $more_styles[] = $this->up_url . '/admin-cache.css?v=' . $this->get_buttons_version();
+        }
+        $more_styles = implode(',', $more_styles);
+        if (!empty($more_styles)) {
+            $styles .= ',' . $more_styles;
+        }
         return $styles;
     }
 
     public function add_css_front() {
-        wp_enqueue_style('wputinymce-style', $this->up_url . '/cache.css?v=' . $this->get_buttons_version());
-        wp_enqueue_style('wputinymce-style-front', $this->up_url . '/front-cache.css?v=' . $this->get_buttons_version());
+        if ($this->files_length['css'] > 0) {
+            wp_enqueue_style('wputinymce-style', $this->up_url . '/cache.css?v=' . $this->get_buttons_version());
+        }
+        if ($this->files_length['front'] > 0) {
+            wp_enqueue_style('wputinymce-style-front', $this->up_url . '/front-cache.css?v=' . $this->get_buttons_version());
+        }
     }
 
     public function add_buttons($buttons = array()) {
