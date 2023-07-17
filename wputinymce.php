@@ -5,7 +5,7 @@ Plugin Name: WPU TinyMCE Buttons
 Plugin URI: https://github.com/WordPressUtilities/wputinymce
 Update URI: https://github.com/WordPressUtilities/wputinymce
 Description: Add new buttons to TinyMCE
-Version: 0.10.3
+Version: 0.10.4
 Author: Darklg
 Author URI: https://darklg.me/
 Text Domain: wputinymce
@@ -22,7 +22,7 @@ class WPUTinyMCE {
     public $settings_update;
     public $buttons;
     public $quicktags;
-    public $plugin_version = '0.10.3';
+    public $plugin_version = '0.10.4';
     private $files_length = false;
     private $options = array(
         'plugin-id' => 'wpu_tinymce'
@@ -236,15 +236,17 @@ class WPUTinyMCE {
         $post_type = get_post_type();
 
         echo '<script type="text/javascript">';
+        echo 'document.addEventListener("DOMContentLoaded", function() {';
         foreach ($this->options['quicktags'] as $button_id => $button) {
             if (in_array('any', $button['post_type']) || in_array($post_type, $button['post_type'])) {
                 $item_id = "wputinymce_" . $button_id;
                 $callback_item = 'callback__' . $item_id;
-                $button['html'] = str_replace("\n",'\n', $button['html']);
+                $button['html'] = str_replace("\n", '\n', $button['html']);
                 echo 'function ' . $callback_item . '(b,el){wputinymce_insertAtCursor(el,wputinymce_filter_vars("' . addslashes($button['html']) . '"));};';
-                echo "if(window.QTags){QTags.addButton( '" . $item_id . "', '" . addslashes($button['title']) . "', " . $callback_item . ", '', '', '" . addslashes($button['title']) . "', 200 );}\n";
+                echo "QTags.addButton( '" . $item_id . "', '" . addslashes($button['title']) . "', " . $callback_item . ", '', '', '" . addslashes($button['title']) . "', 200 );\n";
             }
         }
+        echo '});';
         echo '</script>';
     }
 
